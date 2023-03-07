@@ -28,7 +28,7 @@ class Predictor:
         layerName = [layerName[i - 1] for i in net.getUnconnectedOutLayers()]
         frame = io.BytesIO(imageDataStream)
         frame = np.array(self.read_image_to_rgb(frame)) 
-        print(frame)
+        # print(frame)
         # Convert RGB to BGR 
         # video = video[:, :, ::-1].copy() 
         (W, H) = (None, None)

@@ -1,5 +1,5 @@
 from random import random
-from fastapi import FastAPI, File, WebSocket
+from fastapi import FastAPI, File, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 # from helper import detectFunction
@@ -13,9 +13,6 @@ app = FastAPI(
     version="0.0.1",
 )
 origins = [
-    "http://localhost",
-    "http://localhost:8000",
-    "http://localhost:8001",
     "*"
 ]
 app.add_middleware(
@@ -30,18 +27,29 @@ app.add_middleware(
 async def root():
     return {"message": "wellcome to hololens server websocket"}
 
-@app.websocket("/ws")
+@app.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    while True:
-        respFromClient = await websocket.receive_text()
-        print("respFromClient ==>" + respFromClient)
-        # videoUrl = 'D:/AR/Thesis/backend/ObjectDetection/fastapi/assets/video/video.mp4'
-        # detect_result = detectFunction.detectWithYoloV3(videoUrl)
-        # print("detect_result ==> " + detect_result)
-        # await websocket.send_json(detect_result, "text")
-        return {"message": "success get ws data"}
+    try:
+        while True:
+            file = await websocket.receive_bytes()
 
+            if not file:
+                return {"classes": [], "confidences": [],'boxes': [], "error": "there is no file"}
+            else:
+                modelConfiguration = "./assets/model/cfg/yolov3.cfg"
+                modelWeights = "./assets/model/yolov3.weights"
+                labelsPath = "./assets/model/coco.names"
+                labels = open(labelsPath).read().strip().split('\n')
+
+                imageStream = file
+                pred = Predictor()
+                detect_result = pred.prediction(modelConfiguration, modelWeights, labels, imageStream)
+                print(detect_result)
+                return detect_result
+    except WebSocketDisconnect:
+        return {"classes": [], "confidences": [],'boxes': [], "error": "websocket is closed"}
+    
 @app.post("/predict")
 async def predict(file: bytes = File(...)):
     if not file:
